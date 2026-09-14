@@ -1,0 +1,3161 @@
+openapi: 3.0.3
+info:
+  title: Kennwerk
+  version: 0.1.0
+  description: >-
+    Measurement workbench for national AI capability. Indicators are bound to ecosystem
+    building blocks, versioned, and typed leading or lagging with an expected lag horizon.
+    Observations carry a derivation method and a confidence grade; figures reconstructed
+    from programmes that are not ai-specific carry a second-reviewed attribution share.
+    Cross-country use is gated by a comparability assessment and ranking language is
+    refused below the comparable grade. Gaps are priced against named comparator unit
+    benchmarks, causal claims require a counterfactual basis, and publication runs through
+    frozen methods releases, explicit restatements and traceable evidence packs.
+  x-product-slug: ai-gov-kennwerk
+  x-source: ai-in-gov/Outline_for_a_German_Artificial_Intelligence_Strategy/
+servers:
+  - url: https://api.example.com
+tags:
+  - name: Indicators
+    description: Building blocks, versioned indicator definitions, and lag horizons
+  - name: Observations
+    description: Figures with derivation method, confidence grade, and disclosure state
+  - name: Attribution
+    description: Funding programmes, AI attribution shares, and cost assumptions
+  - name: Comparability
+    description: Comparator jurisdictions, alignment grading, and ranking refusal
+  - name: Gaps
+    description: Quantified capability gaps and costed closure estimates
+  - name: Claims
+    description: Causal versus association-only attribution claims
+  - name: Talent
+    description: Aggregated senior researcher movements and returnee programmes
+  - name: Dependency
+    description: Compute, hardware, and cloud dependency exposures
+  - name: Coverage
+    description: Federal-state coverage submissions and the indicator gap register
+  - name: Publication
+    description: Methods releases, restatements, evidence packs, and assessment reports
+paths:
+  /v1/building-blocks:
+    get:
+      operationId: listBuildingBlocks
+      tags: [Indicators]
+      summary: List ecosystem building blocks and their indicator coverage
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: hasLeadingIndicator
+          in: query
+          description: Filter to building blocks with or without any leading indicator
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Building blocks page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeBuildingBlock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: registerBuildingBlock
+      tags: [Indicators]
+      summary: Register an ecosystem building block of the national strategy
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuildingBlockCreate"
+      responses:
+        "201":
+          description: Building block registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeBuildingBlock"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/indicators:
+    get:
+      operationId: listIndicatorDefinitions
+      tags: [Indicators]
+      summary: List indicator definitions with building block and lag type
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: buildingBlockId
+          in: query
+          schema:
+            type: string
+        - name: indicatorType
+          in: query
+          schema:
+            $ref: "#/components/schemas/IndicatorType"
+      responses:
+        "200":
+          description: Indicator definitions page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeIndicatorDefinition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createIndicatorDefinition
+      tags: [Indicators]
+      summary: Define an indicator against a building block with its expected lag
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IndicatorDefinitionCreate"
+      responses:
+        "201":
+          description: Indicator defined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIndicatorDefinition"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/indicators/{indicatorId}:
+    parameters:
+      - $ref: "#/components/parameters/IndicatorId"
+    get:
+      operationId: getIndicatorDefinition
+      tags: [Indicators]
+      summary: Retrieve an indicator definition with its current version
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Indicator definition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIndicatorDefinition"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/indicators/{indicatorId}/versions:
+    parameters:
+      - $ref: "#/components/parameters/IndicatorId"
+    get:
+      operationId: listIndicatorVersions
+      tags: [Indicators]
+      summary: List versions of an indicator definition with effective dates
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Indicator versions page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeIndicatorVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: publishIndicatorVersion
+      tags: [Indicators]
+      summary: Publish a new indicator version with its stated effect on the series
+      description: >-
+        Redefining what counts under an indicator produces a successor version with an
+        effective date and a stated series effect, and requires a restatement where any
+        published figure is affected.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IndicatorVersionCreate"
+      responses:
+        "201":
+          description: Version published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIndicatorVersion"
+        "409":
+          description: Refused because affected published figures have no restatement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/derivation-methods:
+    get:
+      operationId: listDerivationMethods
+      tags: [Observations]
+      summary: List the permitted derivation methods for an observation
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Derivation methods page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeDerivationMethod"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/confidence-grades:
+    get:
+      operationId: listConfidenceGrades
+      tags: [Observations]
+      summary: List the fixed confidence scale and the evidence each grade requires
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Confidence grades page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeConfidenceGrade"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/observations:
+    get:
+      operationId: listObservations
+      tags: [Observations]
+      summary: List observations with method, confidence, and disclosure state
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: indicatorId
+          in: query
+          schema:
+            type: string
+        - name: derivationMethodCode
+          in: query
+          schema:
+            $ref: "#/components/schemas/DerivationMethodCode"
+        - name: period
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Observations page with suppression applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeObservation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createObservation
+      tags: [Observations]
+      summary: Record an observation with its derivation method and inputs
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObservationCreate"
+      responses:
+        "201":
+          description: Observation recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeObservation"
+        "422":
+          description: Rejected because method, inputs, or attribution link are incomplete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/observations/{observationId}:
+    parameters:
+      - $ref: "#/components/parameters/ObservationId"
+    get:
+      operationId: getObservation
+      tags: [Observations]
+      summary: Retrieve an observation with everything needed to reproduce it
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Observation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeObservation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/observations/{observationId}/confidence-grade:
+    parameters:
+      - $ref: "#/components/parameters/ObservationId"
+    put:
+      operationId: assignConfidenceGrade
+      tags: [Observations]
+      summary: Assign or revise the confidence grade on an observation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfidenceGradeAssignment"
+      responses:
+        "200":
+          description: Grade assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeObservation"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/funding-programmes:
+    get:
+      operationId: listFundingProgrammes
+      tags: [Attribution]
+      summary: List funding programmes with budget and stated AI relevance
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: aiSpecific
+          in: query
+          description: Filter to programmes whose stated purpose is AI, or those that are not
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Funding programmes page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeFundingProgramme"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: registerFundingProgramme
+      tags: [Attribution]
+      summary: Register a funding programme and whether its topic description names AI
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FundingProgrammeCreate"
+      responses:
+        "201":
+          description: Programme registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeFundingProgramme"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/attribution-shares:
+    get:
+      operationId: listAttributionShares
+      tags: [Attribution]
+      summary: List AI attribution shares with basis and review state
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: programmeId
+          in: query
+          schema:
+            type: string
+        - name: reviewStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/ReviewStatus"
+      responses:
+        "200":
+          description: Attribution shares page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAttributionShare"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createAttributionShare
+      tags: [Attribution]
+      summary: Propose an AI attribution share for a programme with its basis
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttributionShareCreate"
+      responses:
+        "201":
+          description: Share proposed and awaiting second review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAttributionShare"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/attribution-shares/{shareId}/second-review:
+    parameters:
+      - $ref: "#/components/parameters/ShareId"
+    post:
+      operationId: recordSecondReview
+      tags: [Attribution]
+      summary: Record the second named analyst's review of an attribution share
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecondReviewCreate"
+      responses:
+        "201":
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAttributionShare"
+        "409":
+          description: Refused because the reviewer is the proposing analyst
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/attribution-shares/{shareId}/revisions:
+    parameters:
+      - $ref: "#/components/parameters/ShareId"
+    post:
+      operationId: reviseAttributionShare
+      tags: [Attribution]
+      summary: Revise an attribution basis and recompute every dependent figure
+      description: >-
+        Changing a basis recomputes all observations derived from the share and opens a
+        restatement naming the affected series, so a correction to one programme cannot
+        leave published totals inconsistent.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttributionShareRevision"
+      responses:
+        "201":
+          description: Revision applied with dependent figures recomputed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRecomputationResult"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/cost-assumptions:
+    get:
+      operationId: listCostAssumptions
+      tags: [Attribution]
+      summary: List recorded cost assumptions used to convert spend into capacity
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cost assumptions page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeCostAssumption"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createCostAssumption
+      tags: [Attribution]
+      summary: Record a cost assumption such as annual personnel cost per researcher
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CostAssumptionCreate"
+      responses:
+        "201":
+          description: Assumption recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCostAssumption"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/cost-assumptions/{assumptionId}/headcount-conversions:
+    parameters:
+      - $ref: "#/components/parameters/AssumptionId"
+    post:
+      operationId: convertSpendToHeadcount
+      tags: [Attribution]
+      summary: Convert a spend estimate into headcount under a recorded assumption
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeadcountConversionRequest"
+      responses:
+        "200":
+          description: Conversion with the assumption and confidence carried through
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeHeadcountConversion"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/comparator-jurisdictions:
+    get:
+      operationId: listComparatorJurisdictions
+      tags: [Comparability]
+      summary: List comparator jurisdictions and institutions used in comparisons
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Comparators page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeComparatorJurisdiction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: registerComparatorJurisdiction
+      tags: [Comparability]
+      summary: Register a comparator jurisdiction with its definition source
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComparatorJurisdictionCreate"
+      responses:
+        "201":
+          description: Comparator registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeComparatorJurisdiction"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/comparability-assessments:
+    get:
+      operationId: listComparabilityAssessments
+      tags: [Comparability]
+      summary: List comparability assessments with their grade
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: indicatorId
+          in: query
+          schema:
+            type: string
+        - name: grade
+          in: query
+          schema:
+            $ref: "#/components/schemas/ComparabilityGrade"
+      responses:
+        "200":
+          description: Assessments page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeComparabilityAssessment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createComparabilityAssessment
+      tags: [Comparability]
+      summary: Grade whether definitions, coverage, and periods align with a comparator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComparabilityAssessmentCreate"
+      responses:
+        "201":
+          description: Assessment graded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeComparabilityAssessment"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/comparability-assessments/{assessmentId}:
+    parameters:
+      - $ref: "#/components/parameters/AssessmentId"
+    get:
+      operationId: getComparabilityAssessment
+      tags: [Comparability]
+      summary: Retrieve a comparability assessment with its alignment findings
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeComparabilityAssessment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/comparability-assessments/ranking-attempts:
+    post:
+      operationId: attemptRanking
+      tags: [Comparability]
+      summary: Attempt a ranking and receive a refusal where grade is below comparable
+      description: >-
+        A league-table form is refused for any comparison graded indicative or not
+        comparable; the refusal names the failing alignment dimension and offers the
+        permitted indicative form instead.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RankingAttempt"
+      responses:
+        "200":
+          description: Ranking permitted or refused with the offered alternative form
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRankingRefusal"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/unit-benchmarks:
+    get:
+      operationId: listUnitBenchmarks
+      tags: [Comparability]
+      summary: List unit benchmarks drawn from named institutes and initiatives
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Unit benchmarks page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeUnitBenchmark"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createUnitBenchmark
+      tags: [Comparability]
+      summary: Record a unit benchmark such as the funding level of a named institute
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitBenchmarkCreate"
+      responses:
+        "201":
+          description: Benchmark recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeUnitBenchmark"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/capability-gaps:
+    get:
+      operationId: listCapabilityGaps
+      tags: [Gaps]
+      summary: List capability gaps with distance to a named comparator
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: buildingBlockId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/GapStatus"
+      responses:
+        "200":
+          description: Capability gaps page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeCapabilityGap"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createCapabilityGap
+      tags: [Gaps]
+      summary: Open a gap as a quantified distance on a named indicator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CapabilityGapCreate"
+      responses:
+        "201":
+          description: Gap opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCapabilityGap"
+        "409":
+          description: Refused because the underlying comparison is not graded comparable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/capability-gaps/{gapId}/closure-estimates:
+    parameters:
+      - $ref: "#/components/parameters/GapId"
+    get:
+      operationId: listClosureEstimates
+      tags: [Gaps]
+      summary: List costed closure estimates for a gap
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Closure estimates page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeClosureEstimate"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: priceGapClosure
+      tags: [Gaps]
+      summary: Price a gap closure from a recorded unit benchmark
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClosureEstimateCreate"
+      responses:
+        "201":
+          description: Closure estimate recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeClosureEstimate"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/attribution-claims:
+    get:
+      operationId: listAttributionClaims
+      tags: [Claims]
+      summary: List claims split between causal and association only
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: claimType
+          in: query
+          schema:
+            $ref: "#/components/schemas/ClaimType"
+      responses:
+        "200":
+          description: Attribution claims page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAttributionClaim"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createAttributionClaim
+      tags: [Claims]
+      summary: Assert an outcome claim, with a counterfactual basis if it is causal
+      description: >-
+        A claim submitted as causal without a stated counterfactual basis is stored and
+        published as association only, and the downgrade is recorded.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttributionClaimCreate"
+      responses:
+        "201":
+          description: Claim recorded, possibly downgraded to association
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAttributionClaim"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/talent-movements:
+    get:
+      operationId: listTalentMovements
+      tags: [Talent]
+      summary: List aggregated senior movements with cell-size suppression applied
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: direction
+          in: query
+          schema:
+            $ref: "#/components/schemas/MovementDirection"
+        - name: destinationClass
+          in: query
+          schema:
+            $ref: "#/components/schemas/DestinationClass"
+      responses:
+        "200":
+          description: Talent movements page with suppressed cells marked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeTalentMovement"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createTalentMovement
+      tags: [Talent]
+      summary: Record an aggregated movement of senior researchers
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentMovementCreate"
+      responses:
+        "201":
+          description: Movement recorded, suppressed if below minimum cell size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeTalentMovement"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/returnee-programmes:
+    get:
+      operationId: listReturneeProgrammes
+      tags: [Talent]
+      summary: List returnee programmes with return rates reported separately
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Returnee programmes page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeReturneeProgramme"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: registerReturneeProgramme
+      tags: [Talent]
+      summary: Register a returnee programme with its target and measured returns
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturneeProgrammeCreate"
+      responses:
+        "201":
+          description: Programme registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeReturneeProgramme"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/dependency-exposures:
+    get:
+      operationId: listDependencyExposures
+      tags: [Dependency]
+      summary: List compute and hardware exposures by supplier jurisdiction
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: assetClass
+          in: query
+          schema:
+            $ref: "#/components/schemas/AssetClass"
+      responses:
+        "200":
+          description: Dependency exposures page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeDependencyExposure"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createDependencyExposure
+      tags: [Dependency]
+      summary: Record a dependency exposure with its export-control risk
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DependencyExposureCreate"
+      responses:
+        "201":
+          description: Exposure recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDependencyExposure"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/jurisdiction-coverage:
+    get:
+      operationId: listJurisdictionCoverage
+      tags: [Coverage]
+      summary: List which states are covered, estimated, or missing per indicator
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: indicatorId
+          in: query
+          schema:
+            type: string
+        - name: coverageState
+          in: query
+          schema:
+            $ref: "#/components/schemas/CoverageState"
+      responses:
+        "200":
+          description: Coverage page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeJurisdictionCoverage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: submitJurisdictionCoverage
+      tags: [Coverage]
+      summary: Submit a federal-state figure against the national definition
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JurisdictionCoverageCreate"
+      responses:
+        "201":
+          description: Submission accepted and coverage state updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeJurisdictionCoverage"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/indicator-gap-register:
+    get:
+      operationId: listIndicatorGapEntries
+      tags: [Coverage]
+      summary: List building blocks and dimensions with no usable indicator
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: openOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Indicator gap register page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeIndicatorGapEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: openIndicatorGapEntry
+      tags: [Coverage]
+      summary: Record that a dimension is not yet measurable, with an owner
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IndicatorGapEntryCreate"
+      responses:
+        "201":
+          description: Gap register entry opened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIndicatorGapEntry"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/indicator-gap-register/{entryId}/discharge:
+    parameters:
+      - $ref: "#/components/parameters/EntryId"
+    post:
+      operationId: dischargeIndicatorGapEntry
+      tags: [Coverage]
+      summary: Discharge a gap entry by promoting it to a published indicator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GapEntryDischarge"
+      responses:
+        "200":
+          description: Entry discharged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIndicatorGapEntry"
+        "409":
+          description: Refused because the named indicator has no accepted observation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/methods-releases:
+    get:
+      operationId: listMethodsReleases
+      tags: [Publication]
+      summary: List dated methods releases, including superseded ones
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Methods releases page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeMethodsRelease"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: freezeMethodsRelease
+      tags: [Publication]
+      summary: Freeze a methods release ahead of publication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MethodsReleaseCreate"
+      responses:
+        "201":
+          description: Release frozen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMethodsRelease"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/restatements:
+    get:
+      operationId: listRestatementRecords
+      tags: [Publication]
+      summary: List restatements with affected series, size, and direction
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: indicatorId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Restatements page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeRestatementRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: issueRestatement
+      tags: [Publication]
+      summary: Issue a restatement naming the change, its size, and its reason
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestatementRecordCreate"
+      responses:
+        "201":
+          description: Restatement issued and prior release retained
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRestatementRecord"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/evidence-packs:
+    get:
+      operationId: listEvidencePacks
+      tags: [Publication]
+      summary: List evidence packs issued for inquiries and external citation
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: requestorClass
+          in: query
+          schema:
+            $ref: "#/components/schemas/RequestorClass"
+      responses:
+        "200":
+          description: Evidence packs page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeEvidencePack"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: issueEvidencePack
+      tags: [Publication]
+      summary: Issue a traceable evidence pack against a frozen methods release
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidencePackCreate"
+      responses:
+        "201":
+          description: Pack issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeEvidencePack"
+        "409":
+          description: Refused because a cited observation has no confidence grade
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/assessment-reports:
+    get:
+      operationId: listAssessmentReports
+      tags: [Publication]
+      summary: List annual assessment reports with their stated limitations
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Assessment reports page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAssessmentReport"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: publishAssessmentReport
+      tags: [Publication]
+      summary: Publish the annual assessment with attributed and association counts
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentReportCreate"
+      responses:
+        "201":
+          description: Report published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAssessmentReport"
+        "409":
+          description: Refused because a lagging indicator is scored inside its lag horizon
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Register harvesters, state submission clients, and released-series consumers
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Named analysts, methodologists, and reviewers whose acts are attributed
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    IndicatorId:
+      name: indicatorId
+      in: path
+      required: true
+      schema:
+        type: string
+    ObservationId:
+      name: observationId
+      in: path
+      required: true
+      schema:
+        type: string
+    AssessmentId:
+      name: assessmentId
+      in: path
+      required: true
+      schema:
+        type: string
+    ShareId:
+      name: shareId
+      in: path
+      required: true
+      schema:
+        type: string
+    AssumptionId:
+      name: assumptionId
+      in: path
+      required: true
+      schema:
+        type: string
+    GapId:
+      name: gapId
+      in: path
+      required: true
+      schema:
+        type: string
+    EntryId:
+      name: entryId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnprocessableEntity:
+      description: Unprocessable entity
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        methodsReleaseId:
+          type: string
+          description: Frozen methods release the response was computed against
+        suppressionApplied:
+          type: boolean
+          description: True where any cell in the response was suppressed for size
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        failingDimension:
+          type: string
+          description: Alignment or evidence dimension that caused a refusal
+        offeredAlternative:
+          type: string
+          description: Permitted weaker form, where one exists
+    IndicatorType:
+      type: string
+      enum: [leading, lagging]
+    DerivationMethodCode:
+      type: string
+      enum:
+        - direct_measurement
+        - programme_reconstruction
+        - survey
+        - expert_estimate
+        - external_citation
+    ConfidenceGradeCode:
+      type: string
+      description: Fixed scale from measured through to indicative expert judgement
+      enum: [measured, robust, likely, indicative, insufficient_data]
+    ReviewStatus:
+      type: string
+      enum: [proposed, second_review_pending, accepted, rejected, revised]
+    ComparabilityGrade:
+      type: string
+      enum: [comparable, indicative, not_comparable]
+    GapStatus:
+      type: string
+      enum: [open, priced, closing, closed]
+    ClaimType:
+      type: string
+      enum: [causal, association]
+    MovementDirection:
+      type: string
+      enum: [inbound, outbound]
+    DestinationClass:
+      type: string
+      enum:
+        - domestic_academic
+        - domestic_corporate_lab
+        - foreign_academic
+        - foreign_corporate_lab
+        - public_sector
+    AssetClass:
+      type: string
+      enum: [compute, hardware, cloud, foundation_model]
+    CoverageState:
+      type: string
+      enum: [submitted, estimated, missing]
+    DisclosureState:
+      type: string
+      enum: [publishable, aggregate_only, restricted, embargoed]
+    RequestorClass:
+      type: string
+      enum: [parliamentary_inquiry, ministerial_brief, external_citation, peer_review]
+    BuildingBlock:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        indicatorCount:
+          type: integer
+        leadingIndicatorCount:
+          type: integer
+        openGapEntryCount:
+          type: integer
+    BuildingBlockCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    IndicatorDefinition:
+      type: object
+      required: [id, buildingBlockId, name, indicatorType]
+      properties:
+        id:
+          type: string
+        buildingBlockId:
+          type: string
+        name:
+          type: string
+        indicatorType:
+          $ref: "#/components/schemas/IndicatorType"
+        expectedLagYears:
+          type: integer
+          description: Years before a change in policy could show in this indicator
+        unit:
+          type: string
+        jurisdictionLevel:
+          type: string
+          enum: [national, state, institutional]
+        currentVersionId:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, retired]
+    IndicatorDefinitionCreate:
+      type: object
+      required: [buildingBlockId, name, indicatorType, expectedLagYears]
+      properties:
+        buildingBlockId:
+          type: string
+        name:
+          type: string
+        indicatorType:
+          $ref: "#/components/schemas/IndicatorType"
+        expectedLagYears:
+          type: integer
+        unit:
+          type: string
+        jurisdictionLevel:
+          type: string
+          enum: [national, state, institutional]
+    IndicatorVersion:
+      type: object
+      required: [id, indicatorId, versionLabel, effectiveFrom]
+      properties:
+        id:
+          type: string
+        indicatorId:
+          type: string
+        versionLabel:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date
+        definitionText:
+          type: string
+        seriesEffect:
+          type: string
+          description: Stated effect of the redefinition on the existing series
+        restatementId:
+          type: string
+        supersedesVersionId:
+          type: string
+    IndicatorVersionCreate:
+      type: object
+      required: [versionLabel, effectiveFrom, definitionText, seriesEffect]
+      properties:
+        versionLabel:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date
+        definitionText:
+          type: string
+        seriesEffect:
+          type: string
+        restatementId:
+          type: string
+    DerivationMethod:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          $ref: "#/components/schemas/DerivationMethodCode"
+        label:
+          type: string
+        requiredInputs:
+          type: array
+          items:
+            type: string
+        maximumConfidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+    ConfidenceGrade:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        label:
+          type: string
+        evidenceRequired:
+          type: string
+        publishableAsHeadline:
+          type: boolean
+    ConfidenceGradeAssignment:
+      type: object
+      required: [grade, rationale]
+      properties:
+        grade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        rationale:
+          type: string
+        assignedBy:
+          type: string
+    Observation:
+      type: object
+      required: [id, indicatorId, value, derivationMethodCode]
+      properties:
+        id:
+          type: string
+        indicatorId:
+          type: string
+        indicatorVersionId:
+          type: string
+        period:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        derivationMethodCode:
+          $ref: "#/components/schemas/DerivationMethodCode"
+        inputs:
+          type: array
+          description: Sources and intermediate figures the value was derived from
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              sourceReference:
+                type: string
+              value:
+                type: number
+        confidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        disclosureState:
+          $ref: "#/components/schemas/DisclosureState"
+        attributionShareIds:
+          type: array
+          items:
+            type: string
+        jurisdictionCoverageId:
+          type: string
+        suppressed:
+          type: boolean
+        methodsReleaseId:
+          type: string
+    ObservationCreate:
+      type: object
+      required: [indicatorId, period, value, derivationMethodCode]
+      properties:
+        indicatorId:
+          type: string
+        indicatorVersionId:
+          type: string
+        period:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        derivationMethodCode:
+          $ref: "#/components/schemas/DerivationMethodCode"
+        inputs:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              sourceReference:
+                type: string
+              value:
+                type: number
+        confidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        disclosureState:
+          $ref: "#/components/schemas/DisclosureState"
+        attributionShareIds:
+          type: array
+          items:
+            type: string
+    FundingProgramme:
+      type: object
+      required: [id, name, totalBudget]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        fundingBody:
+          type: string
+        totalBudget:
+          type: number
+        currency:
+          type: string
+        periodFrom:
+          type: string
+          format: date
+        periodTo:
+          type: string
+          format: date
+        aiSpecific:
+          type: boolean
+          description: True where AI is the stated purpose of the programme
+        topicKeywordsMentionAi:
+          type: boolean
+          description: >-
+            False where the funded-topic description does not contain the keywords for
+            artificial intelligence or machine learning, which forces reconstruction
+        sourceReference:
+          type: string
+    FundingProgrammeCreate:
+      type: object
+      required: [name, totalBudget, aiSpecific]
+      properties:
+        name:
+          type: string
+        fundingBody:
+          type: string
+        totalBudget:
+          type: number
+        currency:
+          type: string
+        periodFrom:
+          type: string
+          format: date
+        periodTo:
+          type: string
+          format: date
+        aiSpecific:
+          type: boolean
+        topicKeywordsMentionAi:
+          type: boolean
+        sourceReference:
+          type: string
+    AttributionShare:
+      type: object
+      required: [id, programmeId, share, basis, reviewStatus]
+      properties:
+        id:
+          type: string
+        programmeId:
+          type: string
+        share:
+          type: number
+          minimum: 0
+          maximum: 1
+        basis:
+          type: string
+          enum:
+            - project_level_review
+            - keyword_absence
+            - programme_officer_statement
+            - expert_judgement
+        basisNotes:
+          type: string
+        proposedBy:
+          type: string
+        reviewStatus:
+          $ref: "#/components/schemas/ReviewStatus"
+        secondReview:
+          $ref: "#/components/schemas/SecondReview"
+        confidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        versionLabel:
+          type: string
+    AttributionShareCreate:
+      type: object
+      required: [programmeId, share, basis]
+      properties:
+        programmeId:
+          type: string
+        share:
+          type: number
+          minimum: 0
+          maximum: 1
+        basis:
+          type: string
+          enum:
+            - project_level_review
+            - keyword_absence
+            - programme_officer_statement
+            - expert_judgement
+        basisNotes:
+          type: string
+        proposedBy:
+          type: string
+    SecondReview:
+      type: object
+      required: [reviewerId, outcome]
+      properties:
+        reviewerId:
+          type: string
+        outcome:
+          type: string
+          enum: [accepted, rejected, accepted_with_revision]
+        reviewedAt:
+          type: string
+          format: date-time
+        comment:
+          type: string
+    SecondReviewCreate:
+      type: object
+      required: [reviewerId, outcome]
+      properties:
+        reviewerId:
+          type: string
+        outcome:
+          type: string
+          enum: [accepted, rejected, accepted_with_revision]
+        comment:
+          type: string
+    AttributionShareRevision:
+      type: object
+      required: [share, basis, reason]
+      properties:
+        share:
+          type: number
+          minimum: 0
+          maximum: 1
+        basis:
+          type: string
+          enum:
+            - project_level_review
+            - keyword_absence
+            - programme_officer_statement
+            - expert_judgement
+        reason:
+          type: string
+        openRestatement:
+          type: boolean
+          default: true
+    RecomputationResult:
+      type: object
+      required: [shareId, recomputedObservationIds]
+      properties:
+        shareId:
+          type: string
+        recomputedObservationIds:
+          type: array
+          items:
+            type: string
+        restatementId:
+          type: string
+        largestAbsoluteChange:
+          type: number
+        affectedIndicatorIds:
+          type: array
+          items:
+            type: string
+    CostAssumption:
+      type: object
+      required: [id, label, value]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        currency:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date
+        sourceReference:
+          type: string
+    CostAssumptionCreate:
+      type: object
+      required: [label, value, unit]
+      properties:
+        label:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        currency:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date
+        sourceReference:
+          type: string
+    HeadcountConversionRequest:
+      type: object
+      required: [spendAmount, periodYears]
+      properties:
+        spendAmount:
+          type: number
+        currency:
+          type: string
+        periodYears:
+          type: number
+        observationId:
+          type: string
+    HeadcountConversion:
+      type: object
+      required: [assumptionId, headcount, confidenceGrade]
+      properties:
+        assumptionId:
+          type: string
+        spendAmount:
+          type: number
+        annualSpend:
+          type: number
+        headcount:
+          type: number
+        confidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        derivationNote:
+          type: string
+    ComparatorJurisdiction:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        comparatorType:
+          type: string
+          enum: [country, state, institute, initiative]
+        definitionSource:
+          type: string
+        currency:
+          type: string
+        notes:
+          type: string
+    ComparatorJurisdictionCreate:
+      type: object
+      required: [name, comparatorType]
+      properties:
+        name:
+          type: string
+        comparatorType:
+          type: string
+          enum: [country, state, institute, initiative]
+        definitionSource:
+          type: string
+        currency:
+          type: string
+        notes:
+          type: string
+    ComparabilityAssessment:
+      type: object
+      required: [id, indicatorId, comparatorId, grade]
+      properties:
+        id:
+          type: string
+        indicatorId:
+          type: string
+        comparatorId:
+          type: string
+        grade:
+          $ref: "#/components/schemas/ComparabilityGrade"
+        definitionsAligned:
+          type: boolean
+        coverageAligned:
+          type: boolean
+        periodsAligned:
+          type: boolean
+        failingDimensions:
+          type: array
+          items:
+            type: string
+        assessedBy:
+          type: string
+        notes:
+          type: string
+    ComparabilityAssessmentCreate:
+      type: object
+      required: [indicatorId, comparatorId, grade]
+      properties:
+        indicatorId:
+          type: string
+        comparatorId:
+          type: string
+        grade:
+          $ref: "#/components/schemas/ComparabilityGrade"
+        definitionsAligned:
+          type: boolean
+        coverageAligned:
+          type: boolean
+        periodsAligned:
+          type: boolean
+        notes:
+          type: string
+    RankingAttempt:
+      type: object
+      required: [indicatorId, comparatorIds]
+      properties:
+        indicatorId:
+          type: string
+        comparatorIds:
+          type: array
+          items:
+            type: string
+        intendedForm:
+          type: string
+          enum: [league_table, rank_statement, indicative_comparison]
+        requestedBy:
+          type: string
+    RankingRefusal:
+      type: object
+      required: [refused]
+      properties:
+        refused:
+          type: boolean
+        indicatorId:
+          type: string
+        lowestGrade:
+          $ref: "#/components/schemas/ComparabilityGrade"
+        reason:
+          type: string
+        failingDimensions:
+          type: array
+          items:
+            type: string
+        offeredForm:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+    UnitBenchmark:
+      type: object
+      required: [id, label, unitCost]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        comparatorId:
+          type: string
+        unitCost:
+          type: number
+        currency:
+          type: string
+        unitDescription:
+          type: string
+          description: What one unit buys, for example one new research location
+        sourceReference:
+          type: string
+    UnitBenchmarkCreate:
+      type: object
+      required: [label, unitCost, unitDescription]
+      properties:
+        label:
+          type: string
+        comparatorId:
+          type: string
+        unitCost:
+          type: number
+        currency:
+          type: string
+        unitDescription:
+          type: string
+        sourceReference:
+          type: string
+    CapabilityGap:
+      type: object
+      required: [id, indicatorId, comparatorId, distance, status]
+      properties:
+        id:
+          type: string
+        indicatorId:
+          type: string
+        buildingBlockId:
+          type: string
+        comparatorId:
+          type: string
+        comparabilityAssessmentId:
+          type: string
+        distance:
+          type: number
+        distanceUnit:
+          type: string
+        status:
+          $ref: "#/components/schemas/GapStatus"
+        openedAt:
+          type: string
+          format: date
+        latestClosureEstimateId:
+          type: string
+    CapabilityGapCreate:
+      type: object
+      required: [indicatorId, comparatorId, distance, comparabilityAssessmentId]
+      properties:
+        indicatorId:
+          type: string
+        comparatorId:
+          type: string
+        comparabilityAssessmentId:
+          type: string
+        distance:
+          type: number
+        distanceUnit:
+          type: string
+    ClosureEstimate:
+      type: object
+      required: [id, gapId, unitBenchmarkId, unitsRequired, totalCost]
+      properties:
+        id:
+          type: string
+        gapId:
+          type: string
+        unitBenchmarkId:
+          type: string
+        unitsRequired:
+          type: number
+        totalCost:
+          type: number
+        currency:
+          type: string
+        yearsToClose:
+          type: integer
+        responsibleLevel:
+          type: string
+          enum: [federal, state, joint, european]
+        confidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        approvedBy:
+          type: string
+    ClosureEstimateCreate:
+      type: object
+      required: [unitBenchmarkId, unitsRequired]
+      properties:
+        unitBenchmarkId:
+          type: string
+        unitsRequired:
+          type: number
+        yearsToClose:
+          type: integer
+        responsibleLevel:
+          type: string
+          enum: [federal, state, joint, european]
+        confidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+    AttributionClaim:
+      type: object
+      required: [id, claimType, statement]
+      properties:
+        id:
+          type: string
+        observationId:
+          type: string
+        interventionReference:
+          type: string
+        claimType:
+          $ref: "#/components/schemas/ClaimType"
+        statement:
+          type: string
+        counterfactualBasis:
+          type: string
+        downgradedFromCausal:
+          type: boolean
+        downgradeReason:
+          type: string
+        recordedBy:
+          type: string
+    AttributionClaimCreate:
+      type: object
+      required: [claimType, statement]
+      properties:
+        observationId:
+          type: string
+        interventionReference:
+          type: string
+        claimType:
+          $ref: "#/components/schemas/ClaimType"
+        statement:
+          type: string
+        counterfactualBasis:
+          type: string
+    TalentMovement:
+      type: object
+      required: [id, direction, period]
+      properties:
+        id:
+          type: string
+        direction:
+          $ref: "#/components/schemas/MovementDirection"
+        destinationClass:
+          $ref: "#/components/schemas/DestinationClass"
+        originClass:
+          $ref: "#/components/schemas/DestinationClass"
+        seniorityBand:
+          type: string
+          enum: [professorial, group_leader, senior_researcher]
+        count:
+          type: integer
+          nullable: true
+          description: Null where suppressed below the minimum cell size
+        suppressed:
+          type: boolean
+        minimumCellSize:
+          type: integer
+        period:
+          type: string
+        returneeProgrammeId:
+          type: string
+    TalentMovementCreate:
+      type: object
+      required: [direction, count, period]
+      properties:
+        direction:
+          $ref: "#/components/schemas/MovementDirection"
+        destinationClass:
+          $ref: "#/components/schemas/DestinationClass"
+        originClass:
+          $ref: "#/components/schemas/DestinationClass"
+        seniorityBand:
+          type: string
+          enum: [professorial, group_leader, senior_researcher]
+        count:
+          type: integer
+        period:
+          type: string
+        returneeProgrammeId:
+          type: string
+    ReturneeProgramme:
+      type: object
+      required: [id, name, targetReturns]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        targetReturns:
+          type: integer
+        confirmedReturns:
+          type: integer
+        returnRate:
+          type: number
+        periodFrom:
+          type: string
+          format: date
+        periodTo:
+          type: string
+          format: date
+        reportedSeparatelyFromGeneralRecruitment:
+          type: boolean
+    ReturneeProgrammeCreate:
+      type: object
+      required: [name, targetReturns]
+      properties:
+        name:
+          type: string
+        targetReturns:
+          type: integer
+        periodFrom:
+          type: string
+          format: date
+        periodTo:
+          type: string
+          format: date
+    DependencyExposure:
+      type: object
+      required: [id, assetClass, supplierJurisdiction]
+      properties:
+        id:
+          type: string
+        assetClass:
+          $ref: "#/components/schemas/AssetClass"
+        supplierJurisdiction:
+          type: string
+        supplierConcentrationShare:
+          type: number
+        domesticAlternativeExists:
+          type: boolean
+        exportControlRisk:
+          type: string
+          enum: [none, watch, elevated, demonstrated]
+        precedentReference:
+          type: string
+          description: Named precedent for technology export used as trade leverage
+        period:
+          type: string
+    DependencyExposureCreate:
+      type: object
+      required: [assetClass, supplierJurisdiction]
+      properties:
+        assetClass:
+          $ref: "#/components/schemas/AssetClass"
+        supplierJurisdiction:
+          type: string
+        supplierConcentrationShare:
+          type: number
+        domesticAlternativeExists:
+          type: boolean
+        exportControlRisk:
+          type: string
+          enum: [none, watch, elevated, demonstrated]
+        precedentReference:
+          type: string
+        period:
+          type: string
+    JurisdictionCoverage:
+      type: object
+      required: [id, indicatorId, jurisdictionCode, coverageState]
+      properties:
+        id:
+          type: string
+        indicatorId:
+          type: string
+        jurisdictionCode:
+          type: string
+        jurisdictionName:
+          type: string
+        coverageState:
+          $ref: "#/components/schemas/CoverageState"
+        submittedValue:
+          type: number
+        definitionConformance:
+          type: string
+          enum: [national_definition, local_variant, unstated]
+        submittedBy:
+          type: string
+        period:
+          type: string
+    JurisdictionCoverageCreate:
+      type: object
+      required: [indicatorId, jurisdictionCode, coverageState]
+      properties:
+        indicatorId:
+          type: string
+        jurisdictionCode:
+          type: string
+        coverageState:
+          $ref: "#/components/schemas/CoverageState"
+        submittedValue:
+          type: number
+        definitionConformance:
+          type: string
+          enum: [national_definition, local_variant, unstated]
+        submittedBy:
+          type: string
+        period:
+          type: string
+    IndicatorGapEntry:
+      type: object
+      required: [id, buildingBlockId, dimension, status]
+      properties:
+        id:
+          type: string
+        buildingBlockId:
+          type: string
+        dimension:
+          type: string
+        reasonNotMeasurable:
+          type: string
+        ownerId:
+          type: string
+        proposedDevelopmentRoute:
+          type: string
+        openedAt:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [open, in_development, discharged]
+        dischargedIndicatorId:
+          type: string
+    IndicatorGapEntryCreate:
+      type: object
+      required: [buildingBlockId, dimension, reasonNotMeasurable, ownerId]
+      properties:
+        buildingBlockId:
+          type: string
+        dimension:
+          type: string
+        reasonNotMeasurable:
+          type: string
+        ownerId:
+          type: string
+        proposedDevelopmentRoute:
+          type: string
+    GapEntryDischarge:
+      type: object
+      required: [indicatorId]
+      properties:
+        indicatorId:
+          type: string
+        note:
+          type: string
+    MethodsRelease:
+      type: object
+      required: [id, label, status]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        frozenAt:
+          type: string
+          format: date-time
+        frozenBy:
+          type: string
+        status:
+          type: string
+          enum: [draft, frozen, superseded]
+        indicatorVersionIds:
+          type: array
+          items:
+            type: string
+        observationCount:
+          type: integer
+        supersededByReleaseId:
+          type: string
+    MethodsReleaseCreate:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+        indicatorVersionIds:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    RestatementRecord:
+      type: object
+      required: [id, affectedIndicatorIds, reason]
+      properties:
+        id:
+          type: string
+        priorReleaseId:
+          type: string
+        newReleaseId:
+          type: string
+        affectedIndicatorIds:
+          type: array
+          items:
+            type: string
+        changeSize:
+          type: number
+        changeDirection:
+          type: string
+          enum: [upward, downward, mixed]
+        reason:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+        priorCitersNotified:
+          type: boolean
+    RestatementRecordCreate:
+      type: object
+      required: [affectedIndicatorIds, reason, changeDirection]
+      properties:
+        priorReleaseId:
+          type: string
+        newReleaseId:
+          type: string
+        affectedIndicatorIds:
+          type: array
+          items:
+            type: string
+        changeSize:
+          type: number
+        changeDirection:
+          type: string
+          enum: [upward, downward, mixed]
+        reason:
+          type: string
+    EvidencePack:
+      type: object
+      required: [id, requestorClass, issuedAt]
+      properties:
+        id:
+          type: string
+        requestor:
+          type: string
+        requestorClass:
+          $ref: "#/components/schemas/RequestorClass"
+        question:
+          type: string
+        observationIds:
+          type: array
+          items:
+            type: string
+        methodsReleaseId:
+          type: string
+        lowestConfidenceGrade:
+          $ref: "#/components/schemas/ConfidenceGradeCode"
+        statedLimitations:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+        issuedBy:
+          type: string
+    EvidencePackCreate:
+      type: object
+      required: [requestorClass, question, observationIds, methodsReleaseId]
+      properties:
+        requestor:
+          type: string
+        requestorClass:
+          $ref: "#/components/schemas/RequestorClass"
+        question:
+          type: string
+        observationIds:
+          type: array
+          items:
+            type: string
+        methodsReleaseId:
+          type: string
+        statedLimitations:
+          type: string
+    AssessmentReport:
+      type: object
+      required: [id, period, methodsReleaseId]
+      properties:
+        id:
+          type: string
+        period:
+          type: string
+        methodsReleaseId:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        buildingBlocksWithoutLeadingIndicator:
+          type: array
+          items:
+            type: string
+        openGapEntryCount:
+          type: integer
+        attributedFindingCount:
+          type: integer
+        associationOnlyFindingCount:
+          type: integer
+        rankingRefusalCount:
+          type: integer
+        statedLimitations:
+          type: string
+    AssessmentReportCreate:
+      type: object
+      required: [period, methodsReleaseId, statedLimitations]
+      properties:
+        period:
+          type: string
+        methodsReleaseId:
+          type: string
+        statedLimitations:
+          type: string
+    DataEnvelopeBuildingBlock:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BuildingBlock"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeBuildingBlock:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/BuildingBlock"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeIndicatorDefinition:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/IndicatorDefinition"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeIndicatorDefinition:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/IndicatorDefinition"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeIndicatorVersion:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/IndicatorVersion"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeIndicatorVersion:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/IndicatorVersion"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeDerivationMethod:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/DerivationMethod"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeConfidenceGrade:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ConfidenceGrade"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeObservation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Observation"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeObservation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Observation"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeFundingProgramme:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/FundingProgramme"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeFundingProgramme:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FundingProgramme"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAttributionShare:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AttributionShare"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAttributionShare:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AttributionShare"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeRecomputationResult:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RecomputationResult"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCostAssumption:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CostAssumption"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeCostAssumption:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CostAssumption"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeHeadcountConversion:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/HeadcountConversion"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeComparatorJurisdiction:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ComparatorJurisdiction"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeComparatorJurisdiction:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ComparatorJurisdiction"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeComparabilityAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ComparabilityAssessment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeComparabilityAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ComparabilityAssessment"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeRankingRefusal:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RankingRefusal"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeUnitBenchmark:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/UnitBenchmark"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeUnitBenchmark:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/UnitBenchmark"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCapabilityGap:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CapabilityGap"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeCapabilityGap:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CapabilityGap"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeClosureEstimate:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ClosureEstimate"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeClosureEstimate:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ClosureEstimate"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAttributionClaim:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AttributionClaim"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAttributionClaim:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AttributionClaim"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeTalentMovement:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/TalentMovement"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeTalentMovement:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/TalentMovement"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeReturneeProgramme:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ReturneeProgramme"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeReturneeProgramme:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ReturneeProgramme"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDependencyExposure:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DependencyExposure"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeDependencyExposure:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/DependencyExposure"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeJurisdictionCoverage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/JurisdictionCoverage"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeJurisdictionCoverage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/JurisdictionCoverage"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeIndicatorGapEntry:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/IndicatorGapEntry"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeIndicatorGapEntry:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/IndicatorGapEntry"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeMethodsRelease:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/MethodsRelease"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeMethodsRelease:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MethodsRelease"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeRestatementRecord:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RestatementRecord"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeRestatementRecord:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/RestatementRecord"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeEvidencePack:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/EvidencePack"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeEvidencePack:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/EvidencePack"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAssessmentReport:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AssessmentReport"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAssessmentReport:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AssessmentReport"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
